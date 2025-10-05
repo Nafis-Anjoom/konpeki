@@ -355,7 +355,7 @@ function App() {
                 onClick={handleGenerateDsl}
                 className="mt-2 bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600"
               >
-                Generate DSL from Natural Language
+                Generate Rule from Natural Language
               </button>
             </div>
 
