@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTransactions, addTransaction, getRules, addRule, reapplyRules } from './api';
+import { getTransactions, addTransaction, getRules, addRule, reapplyRules, generateDsl } from './api';
 
 interface ITransaction {
   id?: string;
@@ -31,6 +31,10 @@ function App() {
   const [reapplyMessage, setReapplyMessage] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // State for natural language input
+  const [naturalLanguageInput, setNaturalLanguageInput] = useState<string>('');
+  const [isGeneratingDsl, setIsGeneratingDsl] = useState<boolean>(false);
+
   const accountOptions = ["Checking", "Savings", "Credit Card", "Investment"];
   const merchantOptions = ["Walmart", "Target", "Starbucks", "Amazon", "Local Grocer", "Gas Station"];
 
@@ -50,6 +54,7 @@ function App() {
       const fetchedRules = await getRules();
       setRules(fetchedRules);
     } catch (err: any) {
+      console.error('Error fetching data:', err);
       setError(err.message);
       showNotification(err.message, 'error');
     } finally {
@@ -77,6 +82,26 @@ function App() {
     } catch (err: any) {
       setError(err.message);
       showNotification(err.message, 'error');
+    }
+  };
+
+  const handleGenerateDsl = async () => {
+    if (!naturalLanguageInput.trim()) {
+      showNotification('Please enter natural language text to generate DSL.', 'error');
+      return;
+    }
+    setIsGeneratingDsl(true);
+    try {
+      showNotification('Generating DSL...', 'success');
+      const { dsl } = await generateDsl(naturalLanguageInput);
+      setRuleDefinitionInput(dsl);
+      setNaturalLanguageInput(''); // Clear input after generation
+      showNotification('DSL generated successfully!', 'success');
+    } catch (err: any) {
+      console.error('Error generating DSL:', err);
+      showNotification(err.message || 'Failed to generate DSL.', 'error');
+    } finally {
+      setIsGeneratingDsl(false);
     }
   };
 
@@ -212,6 +237,25 @@ function App() {
         <div>
           <h2 className="text-2xl font-semibold mb-4">Rules</h2>
           <form onSubmit={handleAddRule} className="bg-white p-4 rounded shadow-md mb-6">
+            <h3 className="text-xl font-medium mb-3">Generate DSL from Natural Language</h3>
+            <div className="mb-2">
+              <textarea
+                placeholder='e.g., If merchant is Starbucks and amount is less than 10, categorize as Coffee'
+                value={naturalLanguageInput}
+                onChange={(e) => setNaturalLanguageInput(e.target.value)}
+                className="border p-2 w-full rounded font-mono text-sm"
+                rows={4}
+              ></textarea>
+            </div>
+            <button
+              type="button"
+              onClick={handleGenerateDsl}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4"
+              disabled={isGeneratingDsl}
+            >
+              {isGeneratingDsl ? 'Generating...' : 'Generate DSL'}
+            </button>
+
             <h3 className="text-xl font-medium mb-3">Add New Rule</h3>
             <div className="mb-2">
               <textarea
