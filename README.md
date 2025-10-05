@@ -1,7 +1,3 @@
-Perfect! We can incorporate your **DSL grammar section** into the README in a way that flows naturally after the summary and features. Here’s how the enhanced README would look with the DSL part added:
-
----
-
 # Smart Transaction Categorizer
 
 ![Smart Transaction Categorizer Screenshot](assets/Screenshot%20From%202025-10-05%2005-04-16.png)
