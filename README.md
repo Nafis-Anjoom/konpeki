@@ -1,72 +1,75 @@
 # Smart Transaction Categorizer
 
-This is a 7-hour solo hackathon project that automatically re-categorizes financial transactions based on user-defined rules.
+This is a full-stack project for automatically re-categorizing financial transactions based on user-defined rules.
 
 ## Project Structure
 
-- `/server`: Bun + Mongoose backend.
-- `/client`: React + Vite + Tailwind CSS + shadcn/ui frontend.
+- `server/`: Backend powered by Bun, Express-like routing, MongoDB, and Mongoose.
+- `client/`: Frontend built with React, TypeScript, Vite, Tailwind CSS, and shadcn/ui.
 
-## Setup
+## Setup and Run Instructions
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/)
-- [Node.js](https://nodejs.org/) (for npm)
-- [MongoDB](https://www.mongodb.com/try/download/community) (or a MongoDB Atlas account)
+- Node.js (for client dependencies)
+- Bun (for server)
+- MongoDB instance (local or cloud)
 
-### 1. Backend (`/server`)
+### Backend Setup (server/)
 
-1.  **Navigate to the server directory:**
+1.  Navigate to the `server` directory:
     ```bash
     cd server
     ```
-
-2.  **Install dependencies:**
+2.  Install dependencies:
     ```bash
     bun install
     ```
-
-3.  **Set up environment variables:**
-    -   Copy the example `.env.example` file to a new `.env` file:
-        ```bash
-        cp .env.example .env
-        ```
-    -   Open the `.env` file and replace `"your_mongodb_connection_string_here"` with your actual MongoDB connection string.
-
-4.  **Seed the database (optional):**
-    -   To populate the database with initial sample data, run:
-        ```bash
-        bun run seed
-        ```
-
-### 2. Frontend (`/client`)
-
-1.  **Navigate to the client directory:**
+3.  Create a `.env` file in the `server` directory based on `.env.example` and provide your MongoDB URI:
+    ```
+    MONGO_URI="your_mongodb_connection_string"
+    ```
+4.  Run the seed script (optional, for initial data):
     ```bash
-    cd ../client
+    bun run seed
+    ```
+5.  Start the backend server:
+    ```bash
+    bun run dev
     ```
 
-2.  **Install dependencies:**
+### Frontend Setup (client/)
+
+1.  Navigate to the `client` directory:
+    ```bash
+    cd client
+    ```
+2.  Install dependencies:
     ```bash
     npm install
     ```
+3.  Start the frontend development server:
+    ```bash
+    npm run dev
+    ```
 
-## Running the Application
+### Full Stack
 
-1.  **Start the backend server:**
-    -   In the `/server` directory, run:
-        ```bash
-        bun run dev
-        ```
-    -   The server will start on `http://localhost:3000`.
+1.  Ensure both backend and frontend servers are running in separate terminals.
+2.  Open your browser to `http://localhost:5173` (or whatever port the client starts on).
 
-2.  **Start the frontend development server:**
-    -   In the `/client` directory, run:
-        ```bash
-        npm run dev
-        ```
-    -   The frontend will be available at `http://localhost:5173` (or another port if 5173 is busy).
+## API Endpoints
 
-3.  **Open the application:**
-    -   Open your web browser and navigate to the address provided by the Vite development server (usually `http://localhost:5173`).
+### Transactions
+
+- `GET /api/transactions`: Fetch all transactions.
+- `POST /api/transactions`: Add a new transaction.
+
+### Rules
+
+- `GET /api/rules`: Fetch all rules.
+- `POST /api/rules`: Add a new rule.
+
+### Categorization
+
+- `POST /api/reapply-rules`: Re-categorize transactions based on defined rules.

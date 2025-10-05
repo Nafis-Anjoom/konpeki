@@ -1,8 +1,7 @@
-
-import { connectDB } from "./db";
-import { Transaction, Rule, ITransaction } from "./models";
-import cors from "cors";
+import connectDB from './db';
+import cors from 'cors';
 import 'dotenv/config';
+import { handleRequest } from './routes';
 
 const PORT = process.env.PORT || 3000;
 
@@ -20,76 +19,40 @@ const app = {
       return handleCors(request);
     }
 
+    // Create a mock response object for handleRequest
+    let responseBody: any = {};
+    let responseStatus: number = 200;
+
+    const res = {
+      status: (code: number) => {
+        responseStatus = code;
+        return res;
+      },
+      json: (data: any) => {
+        responseBody = data;
+      },
+    };
+
+    // Parse request body for POST requests
+    let requestBody: any;
+    if (request.method === 'POST') {
+      try {
+        requestBody = await request.json();
+      } catch (error) {
+        console.error('Error parsing request body:', error);
+        return createJsonResponse({ message: 'Invalid JSON body' }, 400);
+      }
+    }
+
     try {
-      // API Routes
-      if (path === "/api/transactions" && method === "GET") {
-        const transactions = await Transaction.find().sort({ date: -1 });
-        return createJsonResponse(transactions);
-      }
-
-      if (path === "/api/transactions" && method === "POST") {
-        const newTransaction = await request.json();
-        const transaction = new Transaction(newTransaction);
-        await transaction.save();
-        return createJsonResponse(transaction, 201);
-      }
-
-      if (path === "/api/rules" && method === "GET") {
-        const rules = await Rule.find();
-        return createJsonResponse(rules);
-      }
-
-      if (path === "/api/rules" && method === "POST") {
-        const newRule = await request.json();
-        const rule = new Rule(newRule);
-        await rule.save();
-        return createJsonResponse(rule, 201);
-      }
-
-      if (path === "/api/reapply-rules" && method === "POST") {
-        const rules = await Rule.find();
-        const transactions = await Transaction.find();
-        let updatedCount = 0;
-
-        for (const transaction of transactions) {
-          let originalCategory = transaction.category;
-          for (const rule of rules) {
-            if (matchesRule(transaction, rule.conditions)) {
-              transaction.category = rule.newCategory;
-            }
-          }
-          if (originalCategory !== transaction.category) {
-            await transaction.save();
-            updatedCount++;
-          }
-        }
-        return createJsonResponse({ message: `${updatedCount} transactions updated.` });
-      }
-
-      return new Response("Not Found", { status: 404 });
+      await handleRequest({ url: path, method, body: requestBody }, res);
+      return createJsonResponse(responseBody, responseStatus);
     } catch (error) {
-      console.error("Server Error:", error);
-      return createJsonResponse({ message: "Internal Server Error" }, 500);
+      console.error('Server Error:', error);
+      return createJsonResponse({ message: 'Internal Server Error' }, 500);
     }
   },
 };
-
-// Rule matching logic
-function matchesRule(transaction: ITransaction, conditions: any): boolean {
-  if (conditions.merchant && transaction.merchant.toLowerCase() !== conditions.merchant.toLowerCase()) {
-    return false;
-  }
-  if (conditions.dayOfWeek !== undefined && transaction.date.getDay() !== conditions.dayOfWeek) {
-    return false;
-  }
-  if (conditions.maxAmount !== undefined && transaction.amount > conditions.maxAmount) {
-    return false;
-  }
-  if (conditions.account && transaction.account !== conditions.account) {
-    return false;
-  }
-  return true;
-}
 
 // CORS handler
 const corsHeaders = {
@@ -130,8 +93,6 @@ function createJsonResponse(body: any, status = 200): Response {
     return response;
 }
 
-
 console.log(`Server running on port ${PORT}`);
 
 export default app;
-

@@ -1,7 +1,5 @@
+import mongoose, { Document, Schema } from 'mongoose';
 
-import mongoose, { Schema, Document } from 'mongoose';
-
-// Interface for Transaction
 export interface ITransaction extends Document {
   merchant: string;
   amount: number;
@@ -10,31 +8,28 @@ export interface ITransaction extends Document {
   category: string;
 }
 
-// Interface for Rule
 export interface IRule extends Document {
   conditions: {
     merchant?: string;
-    dayOfWeek?: number; // 0 for Sunday, 1 for Monday, etc.
+    dayOfWeek?: number; // 0 for Sunday, 6 for Saturday
     maxAmount?: number;
     account?: string;
   };
   newCategory: string;
 }
 
-// Transaction Schema
 const TransactionSchema: Schema = new Schema({
   merchant: { type: String, required: true },
   amount: { type: Number, required: true },
-  date: { type: Date, required: true, default: Date.now },
+  date: { type: Date, required: true },
   account: { type: String, required: true },
-  category: { type: String, required: true, default: 'Uncategorized' },
+  category: { type: String, required: true },
 });
 
-// Rule Schema
 const RuleSchema: Schema = new Schema({
   conditions: {
     merchant: { type: String },
-    dayOfWeek: { type: Number },
+    dayOfWeek: { type: Number, min: 0, max: 6 },
     maxAmount: { type: Number },
     account: { type: String },
   },
