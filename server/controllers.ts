@@ -119,13 +119,14 @@ export const generateDsl = async (naturalLanguageText: string): Promise<{ dsl: s
   const prompt = `Convert the following natural language into a DSL rule. The DSL rule should follow the format: "condition -> newCategory".
 
 Available transaction fields are: merchant (string), amount (number), date (Date), account (string), category (string).
-Available helper functions for date are: dayOfWeek(date) (0 for Sunday, 6 for Saturday), month(date) (1 for Jan, 12 for Dec), year(date), day(date), isWeekend(date), getWeekNumber(date).
+Available helper functions for date are: dayOfWeek(date) (0 for Sunday, 6 for Saturday), month(date) (1 for Jan, 12 for Dec), year(date), day(date), isWeekend(date), getWeekNumber(date), isDateBetween(date, "YYYY-MM-DD", "YYYY-MM-DD").
 
 Examples:
 - "If merchant is Starbucks and amount is less than 10, categorize as Coffee" -> 'transaction.merchant === "Starbucks" && transaction.amount < 10 -> "Coffee"'
 - "Categorize transactions from Walmart on weekends as Groceries" -> 'transaction.merchant === "Walmart" && isWeekend(transaction.date) -> "Groceries"'
 - "If amount is greater than 100 and account is Credit Card, categorize as Large Purchase" -> 'transaction.amount > 100 && transaction.account === "Credit Card" -> "Large Purchase"'
 - "If merchant contains 'Amazon' and month is December, categorize as Holiday Shopping" -> 'transaction.merchant.includes("Amazon") && month(transaction.date) === 12 -> "Holiday Shopping"'
+- "Categorize transactions in January 2023 as Q1 Spending" -> 'isDateBetween(transaction.date, "2023-01-01", "2023-01-31") -> "Q1 Spending"'
 
 Natural Language: "${naturalLanguageText}"
 

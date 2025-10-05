@@ -17,6 +17,12 @@ const dslHelpers = {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   },
+  isDateBetween: (date: Date, startDateString: string, endDateString: string) => {
+    const transactionDate = new Date(date);
+    const startDate = new Date(startDateString);
+    const endDate = new Date(endDateString);
+    return transactionDate >= startDate && transactionDate <= endDate;
+  },
   // Add more helpers as needed, e.g., transaction.merchant.toLowerCase().includes("walmart")
   // For 'contains' and 'matches' we can rely on JS string methods or regex directly in the DSL
 };
