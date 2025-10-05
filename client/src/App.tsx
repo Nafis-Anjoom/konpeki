@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { getTransactions, addTransaction, getRules, addRule, reapplyRules, transcribeAudio } from './api';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getTransactions, addTransaction, getRules, addRule, reapplyRules, transcribeAudio, generateDsl } from './api';
 
 interface ITransaction {
   id?: string;
@@ -26,6 +26,7 @@ function App() {
     category: '',
   });
   const [ruleDefinitionInput, setRuleDefinitionInput] = useState<string>(`transaction.merchant === "Walmart" && dayOfWeek(transaction.date) === 6 && transaction.amount < 80 -> "Hardware"`);
+  const [naturalLanguageInput, setNaturalLanguageInput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [reapplyMessage, setReapplyMessage] = useState<string | null>(null);
@@ -34,7 +35,6 @@ function App() {
   // State for audio recording
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const audioChunksRef = useRef<Blob[]>([]); // Use useRef for audio chunks
   const [transcribedText, setTranscribedText] = useState<string>('');
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -42,14 +42,14 @@ function App() {
   const accountOptions = ["Checking", "Savings", "Credit Card", "Investment"];
   const merchantOptions = ["Walmart", "Target", "Starbucks", "Amazon", "Local Grocer", "Gas Station"];
 
-  const showNotification = (message: string, type: 'success' | 'error') => {
+  const showNotification = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
     setTimeout(() => {
       setNotification(null);
     }, 5000); // Clear after 5 seconds
-  };
+  }, [setNotification]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -57,18 +57,18 @@ function App() {
       setTransactions(fetchedTransactions);
       const fetchedRules = await getRules();
       setRules(fetchedRules);
-    } catch (err: any) {
+    } catch (err: Error) {
       console.error('Error fetching data:', err);
       setError(err.message);
       showNotification(err.message, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [setTransactions, setRules, setLoading, setError, showNotification]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const startRecording = async () => {
     console.log('Attempting to start recording...');
@@ -126,9 +126,9 @@ function App() {
           showNotification('Transcribing audio...', 'success');
           const result = await transcribeAudio(audioBlob);
           setTranscribedText(result.transcript);
-          setRuleDefinitionInput(result.transcript); // Populate rule input with transcript
+          setNaturalLanguageInput(result.transcript); // Populate natural language input with transcript
           showNotification('Audio transcribed successfully!', 'success');
-        } catch (err: any) {
+        } catch (err: Error) {
           console.error('Error during transcription:', err);
           showNotification(err.message || 'Failed to transcribe audio.', 'error');
         }
@@ -137,7 +137,7 @@ function App() {
       recorder.start();
       setIsRecording(true);
       showNotification('Recording started...', 'success');
-    } catch (err: any) {
+    } catch (err: Error) {
       console.error('Error starting recording:', err);
       showNotification(err.message || 'Failed to start recording.', 'error');
     }
@@ -150,6 +150,22 @@ function App() {
       setIsRecording(false);
       mediaStreamRef.current?.getTracks().forEach(track => track.stop()); // Stop microphone access
       showNotification('Recording stopped.', 'success');
+    }
+  };
+
+  const handleGenerateDsl = async () => {
+    if (!naturalLanguageInput.trim()) {
+      showNotification('Please enter natural language text to generate DSL.', 'error');
+      return;
+    }
+    try {
+      showNotification('Generating DSL...', 'success');
+      const result = await generateDsl(naturalLanguageInput);
+      setRuleDefinitionInput(result.dsl);
+      showNotification('DSL generated successfully!', 'success');
+    } catch (err: Error) {
+      console.error('Error generating DSL:', err);
+      showNotification(err.message || 'Failed to generate DSL.', 'error');
     }
   };
 
@@ -166,7 +182,7 @@ function App() {
       });
       fetchData(); // Refresh data
       showNotification('Transaction added successfully!', 'success');
-    } catch (err: any) {
+    } catch (err: Error) {
       setError(err.message);
       showNotification(err.message, 'error');
     }
@@ -179,7 +195,7 @@ function App() {
       setRuleDefinitionInput(`transaction.merchant === "Walmart" && dayOfWeek(transaction.date) === 6 && transaction.amount < 80 -> "Hardware"`);
       fetchData(); // Refresh data
       showNotification('Rule added successfully!', 'success');
-    } catch (err: any) {
+    } catch (err: Error) {
       setError(err.message);
       showNotification(err.message, 'error');
     }
@@ -191,7 +207,7 @@ function App() {
       setReapplyMessage(result.message);
       fetchData(); // Refresh data to show updated categories
       showNotification(result.message, 'success');
-    } catch (err: any) {
+    } catch (err: Error) {
       setError(err.message);
       showNotification(err.message, 'error');
     }
@@ -305,7 +321,10 @@ function App() {
           <h2 className="text-2xl font-semibold mb-4">Rules</h2>
           <form onSubmit={handleAddRule} className="bg-white p-4 rounded shadow-md mb-6">
             <h3 className="text-xl font-medium mb-3">Add New Rule</h3>
+
+            {/* Level 3: Voice Input */}
             <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">Voice Input (Whisper)</label>
               <button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
@@ -317,8 +336,36 @@ function App() {
                 <p className="mt-2 text-sm text-gray-700">Transcribed: <span className="font-mono">{transcribedText}</span></p>
               )}
             </div>
-            <div className="mb-2">
+
+            {/* Level 2: Natural Language Input (Gemini) */}
+            <div className="mb-4">
+              <label htmlFor="naturalLanguageInput" className="block text-gray-700 text-sm font-bold mb-2">
+                Natural Language Rule (Gemini)
+              </label>
               <textarea
+                id="naturalLanguageInput"
+                placeholder='e.g., "Categorize transactions from Starbucks as Coffee if amount is less than 10"'
+                value={naturalLanguageInput}
+                onChange={(e) => setNaturalLanguageInput(e.target.value)}
+                className="border p-2 w-full rounded font-mono text-sm"
+                rows={4}
+              ></textarea>
+              <button
+                type="button"
+                onClick={handleGenerateDsl}
+                className="mt-2 bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600"
+              >
+                Generate DSL from Natural Language
+              </button>
+            </div>
+
+            {/* Level 1: Direct DSL Input */}
+            <div className="mb-2">
+              <label htmlFor="ruleDefinitionInput" className="block text-gray-700 text-sm font-bold mb-2">
+                DSL Rule (Direct Input)
+              </label>
+              <textarea
+                id="ruleDefinitionInput"
                 placeholder='Enter DSL Rule (e.g., transaction.merchant === "Walmart" && dayOfWeek(transaction.date) === 6 -> "Shopping")'
                 value={ruleDefinitionInput}
                 onChange={(e) => setRuleDefinitionInput(e.target.value)}

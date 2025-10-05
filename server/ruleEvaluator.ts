@@ -38,7 +38,9 @@ export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
     return false;
   }
 
-  const conditionString = parts[0]!.trim();
+  const conditionString = parts[0]!.trim().replace(/^`|`$/g, '');
+  console.log('Condition string (trimmed):', conditionString);
+  console.log('Condition string char codes:', Array.from(conditionString).map(char => char.charCodeAt(0)));
   console.log('Condition string:', conditionString);
 
   let compiledFunction = ruleFunctionCache.get(conditionString);

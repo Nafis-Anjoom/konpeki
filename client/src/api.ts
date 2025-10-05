@@ -82,3 +82,18 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<{ transcript: st
   }
   return response.json();
 };
+
+export const generateDsl = async (naturalLanguageText: string): Promise<{ dsl: string }> => {
+  const response = await fetch(`${API_BASE_URL}/generate-dsl`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ naturalLanguageText }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to generate DSL');
+  }
+  return response.json();
+};

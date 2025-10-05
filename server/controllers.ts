@@ -14,7 +14,7 @@ const openai = new OpenAI({
 
 // Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
-const model = genAI.getGenerativeModel({ model: "gemini-pro"}); // Using gemini-pro as a default
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash"}); // Using gemini-2.5-flash as a default
 
 // Helper to generate unique IDs for in-memory items
 const generateUniqueId = () => Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -135,9 +135,12 @@ DSL Rule:`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    // Gemini might return extra formatting like ```dsl
-    const dsl = text.replace(/^```(?:dsl)?\n|\n```$/g, '').trim();
-    console.log('Gemini generated DSL:', dsl);
+    // Aggressively clean up Gemini's output to ensure it's a pure DSL string
+    let dsl = text.replace(/^```(?:dsl)?\n|\n```$/g, ''); // Remove markdown code block fences
+    dsl = dsl.trim(); // Trim leading/trailing whitespace
+    // Remove any non-printable ASCII characters (except common whitespace like space, tab, newline)
+    dsl = dsl.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    console.log('Gemini generated DSL (cleaned):', dsl);
     return { dsl };
   } catch (error) {
     console.error('Error generating DSL with Gemini:', error);
