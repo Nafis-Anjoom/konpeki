@@ -26,7 +26,6 @@ const ruleFunctionCache = new Map<string, Function>();
 
 export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
   console.log('Evaluating rule:', rule.ruleDefinition, 'for transaction ID:', transaction.id);
-  console.log('Full ruleDefinition received by evaluateRule:', rule.ruleDefinition);
   console.log('Full transaction object:', transaction);
   if (!rule || !rule.ruleDefinition) {
     console.log('Rule or ruleDefinition is missing.');
@@ -39,7 +38,7 @@ export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
     return false;
   }
 
-  const conditionString = parts[0]!.trim().replace(/^`|`$/g, '');
+  const conditionString = parts[0]!.trim();
   console.log('Condition string:', conditionString);
 
   let compiledFunction = ruleFunctionCache.get(conditionString);

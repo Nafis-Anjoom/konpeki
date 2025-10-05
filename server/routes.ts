@@ -1,9 +1,10 @@
-import { getTransactions, addTransaction, getRules, addRule, reapplyRules, generateDsl } from './controllers';
+import { getTransactions, addTransaction, getRules, addRule, reapplyRules, transcribeAudio } from './controllers';
 
 interface Request {
   url: string;
   method: string;
   body?: any;
+  audioBuffer?: ArrayBuffer; // Add audioBuffer to the Request interface
 }
 
 interface Response {
@@ -27,15 +28,15 @@ export const handleRequest = async (req: Request, res: Response) => {
   } else if (req.url === '/api/reapply-rules' && req.method === 'POST') {
     const result = await reapplyRules();
     res.status(200).json(result);
-  } else if (req.url === '/api/generate-dsl' && req.method === 'POST') {
-    if (!req.body || !req.body.naturalLanguageText) {
-      return res.status(400).json({ message: 'Missing naturalLanguageText in request body.' });
+  } else if (req.url === '/api/transcribe' && req.method === 'POST') {
+    if (!req.audioBuffer) {
+      return res.status(400).json({ message: 'No audio data provided.' });
     }
     try {
-      const { dsl } = await generateDsl(req.body.naturalLanguageText);
-      res.status(200).json({ dsl });
+      const { transcript } = await transcribeAudio(req.audioBuffer);
+      res.status(200).json({ transcript });
     } catch (error: any) {
-      res.status(500).json({ message: error.message || 'Failed to generate DSL.' });
+      res.status(500).json({ message: error.message || 'Failed to transcribe audio.' });
     }
   } else {
     res.status(404).json({ message: 'Not Found' });

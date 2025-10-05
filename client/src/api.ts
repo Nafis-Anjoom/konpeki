@@ -68,17 +68,17 @@ export const reapplyRules = async (): Promise<{ message: string }> => {
   return response.json();
 };
 
-export const generateDsl = async (naturalLanguageText: string): Promise<{ dsl: string }> => {
-  const response = await fetch(`${API_BASE_URL}/generate-dsl`, {
+export const transcribeAudio = async (audioBlob: Blob): Promise<{ transcript: string }> => {
+  const response = await fetch(`${API_BASE_URL}/transcribe`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': audioBlob.type,
     },
-    body: JSON.stringify({ naturalLanguageText }),
+    body: audioBlob,
   });
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to generate DSL');
+    throw new Error(errorData.message || 'Failed to transcribe audio');
   }
   return response.json();
 };

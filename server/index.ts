@@ -35,20 +35,28 @@ const app = {
 
     // Parse request body for POST requests
     let requestBody: any;
+    let audioBuffer: ArrayBuffer | undefined;
     if (request.method === 'POST') {
       const contentType = request.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         try {
           requestBody = await request.json();
         } catch (error) {
-          console.error('Error parsing request body:', error);
+          console.error('Error parsing JSON request body:', error);
           return createJsonResponse({ message: 'Invalid JSON body' }, 400);
+        }
+      } else if (contentType && contentType.includes('audio/webm')) {
+        try {
+          audioBuffer = await request.arrayBuffer();
+        } catch (error) {
+          console.error('Error parsing audio request body:', error);
+          return createJsonResponse({ message: 'Invalid audio body' }, 400);
         }
       }
     }
 
     try {
-      await handleRequest({ url: path, method, body: requestBody }, res);
+      await handleRequest({ url: path, method, body: requestBody, audioBuffer: audioBuffer }, res);
       return createJsonResponse(responseBody, responseStatus);
     } catch (error) {
       console.error('Server Error:', error);

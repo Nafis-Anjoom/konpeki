@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getTransactions, addTransaction, getRules, addRule, reapplyRules, generateDsl } from './api';
+import { useState, useEffect, useRef } from 'react';
+import { getTransactions, addTransaction, getRules, addRule, reapplyRules, transcribeAudio } from './api';
 
 interface ITransaction {
   id?: string;
@@ -31,9 +31,12 @@ function App() {
   const [reapplyMessage, setReapplyMessage] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // State for natural language input
-  const [naturalLanguageInput, setNaturalLanguageInput] = useState<string>('');
-  const [isGeneratingDsl, setIsGeneratingDsl] = useState<boolean>(false);
+  // State for audio recording
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [transcribedText, setTranscribedText] = useState<string>('');
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   const accountOptions = ["Checking", "Savings", "Credit Card", "Investment"];
   const merchantOptions = ["Walmart", "Target", "Starbucks", "Amazon", "Local Grocer", "Gas Station"];
@@ -66,6 +69,89 @@ function App() {
     fetchData();
   }, []);
 
+  const startRecording = async () => {
+    console.log('Attempting to start recording...');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      console.log('MediaStream obtained:', stream);
+
+      // Check for supported mime types
+      const supportedMimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg',
+        'audio/wav',
+        'audio/mpeg',
+      ];
+      let mimeType = '';
+      for (const type of supportedMimeTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          break;
+        }
+      }
+
+      if (!mimeType) {
+        throw new Error('No supported audio MIME type found for MediaRecorder.');
+      }
+
+      console.log('Using MIME type:', mimeType);
+      const recorder = new MediaRecorder(stream, { mimeType });
+      setMediaRecorder(recorder);
+      setAudioChunks([]); // Ensure chunks are empty at start
+      setTranscribedText('');
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          console.log('ondataavailable fired with data size:', event.data.size);
+          setAudioChunks((prev) => [...prev, event.data]);
+        } else {
+          console.log('ondataavailable fired with empty data.');
+        }
+      };
+
+      recorder.onstop = async () => {
+        console.log('MediaRecorder stopped. Total chunks:', audioChunks.length);
+        const audioBlob = new Blob(audioChunks, { type: mimeType });
+        console.log('Audio Blob created:', audioBlob.type, audioBlob.size, audioBlob);
+
+        if (audioBlob.size === 0) {
+          showNotification('Recording resulted in empty audio. Please ensure microphone is active and speaking.', 'error');
+          return;
+        }
+
+        try {
+          showNotification('Transcribing audio...', 'success');
+          const result = await transcribeAudio(audioBlob);
+          setTranscribedText(result.transcript);
+          setRuleDefinitionInput(result.transcript); // Populate rule input with transcript
+          showNotification('Audio transcribed successfully!', 'success');
+        } catch (err: any) {
+          console.error('Error during transcription:', err);
+          showNotification(err.message || 'Failed to transcribe audio.', 'error');
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      showNotification('Recording started...', 'success');
+    } catch (err: any) {
+      console.error('Error starting recording:', err);
+      showNotification(err.message || 'Failed to start recording.', 'error');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      console.log('Stopping recording...');
+      mediaRecorder.stop();
+      setIsRecording(false);
+      mediaStreamRef.current?.getTracks().forEach(track => track.stop()); // Stop microphone access
+      showNotification('Recording stopped.', 'success');
+    }
+  };
+
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -82,26 +168,6 @@ function App() {
     } catch (err: any) {
       setError(err.message);
       showNotification(err.message, 'error');
-    }
-  };
-
-  const handleGenerateDsl = async () => {
-    if (!naturalLanguageInput.trim()) {
-      showNotification('Please enter natural language text to generate DSL.', 'error');
-      return;
-    }
-    setIsGeneratingDsl(true);
-    try {
-      showNotification('Generating DSL...', 'success');
-      const { dsl } = await generateDsl(naturalLanguageInput);
-      setRuleDefinitionInput(dsl);
-      setNaturalLanguageInput(''); // Clear input after generation
-      showNotification('DSL generated successfully!', 'success');
-    } catch (err: any) {
-      console.error('Error generating DSL:', err);
-      showNotification(err.message || 'Failed to generate DSL.', 'error');
-    } finally {
-      setIsGeneratingDsl(false);
     }
   };
 
@@ -237,26 +303,19 @@ function App() {
         <div>
           <h2 className="text-2xl font-semibold mb-4">Rules</h2>
           <form onSubmit={handleAddRule} className="bg-white p-4 rounded shadow-md mb-6">
-            <h3 className="text-xl font-medium mb-3">Generate DSL from Natural Language</h3>
-            <div className="mb-2">
-              <textarea
-                placeholder='e.g., If merchant is Starbucks and amount is less than 10, categorize as Coffee'
-                value={naturalLanguageInput}
-                onChange={(e) => setNaturalLanguageInput(e.target.value)}
-                className="border p-2 w-full rounded font-mono text-sm"
-                rows={4}
-              ></textarea>
-            </div>
-            <button
-              type="button"
-              onClick={handleGenerateDsl}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4"
-              disabled={isGeneratingDsl}
-            >
-              {isGeneratingDsl ? 'Generating...' : 'Generate DSL'}
-            </button>
-
             <h3 className="text-xl font-medium mb-3">Add New Rule</h3>
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`px-4 py-2 rounded text-white ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+              >
+                {isRecording ? 'Stop Recording' : 'Start Recording'}
+              </button>
+              {transcribedText && (
+                <p className="mt-2 text-sm text-gray-700">Transcribed: <span className="font-mono">{transcribedText}</span></p>
+              )}
+            </div>
             <div className="mb-2">
               <textarea
                 placeholder='Enter DSL Rule (e.g., transaction.merchant === "Walmart" && dayOfWeek(transaction.date) === 6 -> "Shopping")'
