@@ -28,7 +28,7 @@ export const getRules = async (): Promise<IRule[]> => {
 export const addRule = async (ruleData: Omit<IRule, 'id'>): Promise<IRule> => {
   const newRule: IRule = {
     id: generateUniqueId(),
-    ...ruleData,
+    ruleDefinition: ruleData.ruleDefinition,
   };
   inMemoryRules.push(newRule);
   return newRule;
@@ -40,9 +40,17 @@ export const reapplyRules = async () => {
 
   for (const transaction of inMemoryTransactions) {
     for (const rule of inMemoryRules) {
+      // Extract newCategory from rule.ruleDefinition
+      const parts = rule.ruleDefinition.split('->');
+      if (parts.length !== 2) {
+        console.error('Invalid ruleDefinition format in stored rule:', rule.ruleDefinition);
+        continue; // Skip this rule if format is invalid
+      }
+      const newCategoryFromRule = parts[1].trim().replace(/^"|"$/g, ''); // Remove quotes
+
       if (evaluateRule(transaction, rule)) {
-        if (transaction.category !== rule.newCategory) {
-          transaction.category = rule.newCategory;
+        if (transaction.category !== newCategoryFromRule) {
+          transaction.category = newCategoryFromRule;
           updatedCount++;
         }
         // Apply the first matching rule and break

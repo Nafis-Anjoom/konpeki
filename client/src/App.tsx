@@ -13,7 +13,6 @@ interface ITransaction {
 interface IRule {
   id?: string;
   ruleDefinition: string; // Changed to string for DSL
-  newCategory: string;
 }
 
 function App() {
@@ -25,10 +24,6 @@ function App() {
     date: new Date().toISOString().split('T')[0],
     account: '',
     category: '',
-  });
-  const [newRule, setNewRule] = useState<Omit<IRule, 'id'>>({
-    ruleDefinition: '',
-    newCategory: '',
   });
   const [ruleDefinitionInput, setRuleDefinitionInput] = useState<string>(`transaction.merchant === "Walmart" && dayOfWeek(transaction.date) === 6 && transaction.amount < 80 -> "Hardware"`);
   const [loading, setLoading] = useState<boolean>(true);
@@ -88,11 +83,7 @@ function App() {
   const handleAddRule = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addRule({ ...newRule, ruleDefinition: ruleDefinitionInput });
-      setNewRule({
-        ruleDefinition: '',
-        newCategory: '',
-      });
+      await addRule({ ruleDefinition: ruleDefinitionInput });
       setRuleDefinitionInput(`transaction.merchant === "Walmart" && dayOfWeek(transaction.date) === 6 && transaction.amount < 80 -> "Hardware"`);
       fetchData(); // Refresh data
       showNotification('Rule added successfully!', 'success');
@@ -236,16 +227,6 @@ function App() {
                 Operators: <code>===</code>, <code>!==</code>, <code>&&</code>, <code>||</code>, <code>&gt;</code>,<code>&lt;</code>, etc. String methods like <code>.includes("text")</code> and <code>new RegExp("pattern", "i").test(transaction.field)</code> are also available.
               </p>
             </div>
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="New Category"
-                value={newRule.newCategory}
-                onChange={(e) => setNewRule({ ...newRule, newCategory: e.target.value })}
-                className="border p-2 w-full rounded"
-                required
-              />
-            </div>
             <button
               type="submit"
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
@@ -266,21 +247,26 @@ function App() {
             {rules.length === 0 ? (
               <li className="text-gray-500">No rules yet.</li>
             ) : (
-              rules.map((r) => (
-                <li key={r.id} className="border-b last:border-b-0 py-2">
-                  <p><strong>New Category:</strong> {r.newCategory}</p>
-                  <div className="relative group">
-                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto pr-10">{r.ruleDefinition}</pre>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(r.ruleDefinition)}
-                      className="absolute top-1 right-1 bg-gray-200 p-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Copy rule to clipboard"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </li>
-              ))
+              rules.map((r) => {
+                const parts = r.ruleDefinition.split('->');
+                const conditionPart = parts[0] ? parts[0].trim() : '';
+                const newCategoryPart = parts[1] ? parts[1].trim().replace(/^"|"$/g, '') : 'N/A';
+                return (
+                  <li key={r.id} className="border-b last:border-b-0 py-2">
+                    <p><strong>New Category:</strong> {newCategoryPart}</p>
+                    <div className="relative group">
+                      <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto pr-10">{conditionPart}</pre>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(r.ruleDefinition)}
+                        className="absolute top-1 right-1 bg-gray-200 p-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Copy rule to clipboard"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </li>
+                );
+              })
             )}
           </ul>
         </div>

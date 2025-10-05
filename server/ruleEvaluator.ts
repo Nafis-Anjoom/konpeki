@@ -2,13 +2,13 @@ import type { ITransaction, IRule } from './models';
 
 // Helper functions that can be used within the DSL
 const dslHelpers = {
-  dayOfWeek: (date: Date) => new Date(date).getDay(), // 0 for Sunday, 6 for Saturday
-  month: (date: Date) => new Date(date).getMonth() + 1, // 1 for January, 12 for December
-  year: (date: Date) => new Date(date).getFullYear(),
-  day: (date: Date) => new Date(date).getDate(),
+  dayOfWeek: (date: Date) => new Date(date).getUTCDay(), // 0 for Sunday, 6 for Saturday (UTC)
+  month: (date: Date) => new Date(date).getUTCMonth() + 1, // 1 for January, 12 for December (UTC)
+  year: (date: Date) => new Date(date).getUTCFullYear(),
+  day: (date: Date) => new Date(date).getUTCDate(),
   isWeekend: (date: Date) => {
-    const day = new Date(date).getDay();
-    return day === 0 || day === 6; // Sunday or Saturday
+    const day = new Date(date).getUTCDay();
+    return day === 0 || day === 6; // Sunday or Saturday (UTC)
   },
   getWeekNumber: (date: Date) => {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -25,7 +25,8 @@ const dslHelpers = {
 const ruleFunctionCache = new Map<string, Function>();
 
 export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
-  console.log('Evaluating rule:', rule.ruleDefinition, 'for transaction:', transaction.id);
+  console.log('Evaluating rule:', rule.ruleDefinition, 'for transaction ID:', transaction.id);
+  console.log('Full transaction object:', transaction);
   if (!rule || !rule.ruleDefinition) {
     console.log('Rule or ruleDefinition is missing.');
     return false;

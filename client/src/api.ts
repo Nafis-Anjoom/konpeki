@@ -11,8 +11,7 @@ interface ITransaction {
 
 interface IRule {
   id?: string;
-  ruleDefinition: object;
-  newCategory: string;
+  ruleDefinition: string; // Changed to string for DSL
 }
 
 export const getTransactions = async (): Promise<ITransaction[]> => {

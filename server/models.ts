@@ -10,5 +10,4 @@ export interface ITransaction {
 export interface IRule {
   id: string; // Added for in-memory unique identification
   ruleDefinition: string; // Changed to string for DSL
-  newCategory: string;
 }
