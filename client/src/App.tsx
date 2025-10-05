@@ -34,9 +34,17 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [reapplyMessage, setReapplyMessage] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const accountOptions = ["Checking", "Savings", "Credit Card", "Investment"];
   const merchantOptions = ["Walmart", "Target", "Starbucks", "Amazon", "Local Grocer", "Gas Station"];
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 5000); // Clear after 5 seconds
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -48,6 +56,7 @@ function App() {
       setRules(fetchedRules);
     } catch (err: any) {
       setError(err.message);
+      showNotification(err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -69,15 +78,16 @@ function App() {
         category: '',
       });
       fetchData(); // Refresh data
+      showNotification('Transaction added successfully!', 'success');
     } catch (err: any) {
       setError(err.message);
+      showNotification(err.message, 'error');
     }
   };
 
   const handleAddRule = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // No JSON.parse needed, ruleDefinitionInput is already a string
       await addRule({ ...newRule, ruleDefinition: ruleDefinitionInput });
       setNewRule({
         ruleDefinition: '',
@@ -85,8 +95,10 @@ function App() {
       });
       setRuleDefinitionInput(`transaction.merchant === "Walmart" && dayOfWeek(transaction.date) === 6 && transaction.amount < 80 -> "Hardware"`);
       fetchData(); // Refresh data
+      showNotification('Rule added successfully!', 'success');
     } catch (err: any) {
       setError(err.message);
+      showNotification(err.message, 'error');
     }
   };
 
@@ -95,8 +107,10 @@ function App() {
       const result = await reapplyRules();
       setReapplyMessage(result.message);
       fetchData(); // Refresh data to show updated categories
+      showNotification(result.message, 'success');
     } catch (err: any) {
       setError(err.message);
+      showNotification(err.message, 'error');
     }
   };
 
@@ -106,6 +120,15 @@ function App() {
   return (
     <div className="p-4 container mx-auto">
       <h1 className="text-3xl font-bold mb-6">Smart Transaction Categorizer</h1>
+
+      {notification && (
+        <div
+          className={`p-3 rounded mb-4 text-white ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+          role="alert"
+        >
+          {notification.message}
+        </div>
+      )}
 
       {reapplyMessage && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">

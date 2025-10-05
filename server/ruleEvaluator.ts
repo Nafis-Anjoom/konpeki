@@ -1,4 +1,4 @@
-import { ITransaction, IRule } from './models';
+import type { ITransaction, IRule } from './models';
 
 // Helper functions that can be used within the DSL
 const dslHelpers = {
@@ -6,6 +6,17 @@ const dslHelpers = {
   month: (date: Date) => new Date(date).getMonth() + 1, // 1 for January, 12 for December
   year: (date: Date) => new Date(date).getFullYear(),
   day: (date: Date) => new Date(date).getDate(),
+  isWeekend: (date: Date) => {
+    const day = new Date(date).getDay();
+    return day === 0 || day === 6; // Sunday or Saturday
+  },
+  getWeekNumber: (date: Date) => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  },
   // Add more helpers as needed, e.g., transaction.merchant.toLowerCase().includes("walmart")
   // For 'contains' and 'matches' we can rely on JS string methods or regex directly in the DSL
 };
@@ -26,7 +37,7 @@ export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
     return false;
   }
 
-  const conditionString = parts[0].trim();
+  const conditionString = parts[0]!.trim();
   console.log('Condition string:', conditionString);
 
   let compiledFunction = ruleFunctionCache.get(conditionString);

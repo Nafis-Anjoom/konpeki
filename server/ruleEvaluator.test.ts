@@ -66,6 +66,63 @@ describe('evaluateRule (DSL)', () => {
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
+  it('should handle isWeekend function for a weekend day', () => {
+    const rule: IRule = {
+      id: 'rule14',
+      ruleDefinition: `isWeekend(transaction.date) === true -> "Weekend Transaction"`,
+      newCategory: 'Weekend Transaction',
+    };
+    expect(evaluateRule(mockTransaction, rule)).toBe(true);
+  });
+
+  it('should handle isWeekend function for a weekday', () => {
+    const weekdayTransaction: ITransaction = {
+      ...mockTransaction,
+      id: '2',
+      date: new Date('2025-10-06T10:00:00Z'), // Monday
+    };
+    const rule: IRule = {
+      id: 'rule15',
+      ruleDefinition: `isWeekend(transaction.date) === false -> "Weekday Transaction"`,
+      newCategory: 'Weekday Transaction',
+    };
+    expect(evaluateRule(weekdayTransaction, rule)).toBe(true);
+  });
+
+  it('should handle getWeekNumber function correctly', () => {
+    // October 4, 2025 is Week 40 (ISO week date) or Week 40 (simple week of year)
+    const rule: IRule = {
+      id: 'rule16',
+      ruleDefinition: `getWeekNumber(transaction.date) === 40 -> "Week 40 Transaction"`,
+      newCategory: 'Week 40 Transaction',
+    };
+    expect(evaluateRule(mockTransaction, rule)).toBe(true);
+  });
+
+  it('should handle "every other weekend" logic (even week number)', () => {
+    // October 4, 2025 is Week 40 (even week number)
+    const rule: IRule = {
+      id: 'rule17',
+      ruleDefinition: `isWeekend(transaction.date) && getWeekNumber(transaction.date) % 2 === 0 -> "Every Other Weekend"`,
+      newCategory: 'Every Other Weekend',
+    };
+    expect(evaluateRule(mockTransaction, rule)).toBe(true);
+  });
+
+  it('should handle "every other weekend" logic (odd week number - should fail)', () => {
+    const oddWeekTransaction: ITransaction = {
+      ...mockTransaction,
+      id: '3',
+      date: new Date('2025-10-11T10:00:00Z'), // Saturday, Week 41 (odd week number)
+    };
+    const rule: IRule = {
+      id: 'rule18',
+      ruleDefinition: `isWeekend(transaction.date) && getWeekNumber(transaction.date) % 2 === 0 -> "Every Other Weekend"`,
+      newCategory: 'Every Other Weekend',
+    };
+    expect(evaluateRule(oddWeekTransaction, rule)).toBe(false);
+  });
+
   it('should handle string includes (like contains)', () => {
     const rule: IRule = {
       id: 'rule7',

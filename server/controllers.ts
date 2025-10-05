@@ -14,6 +14,7 @@ export const addTransaction = async (transactionData: Omit<ITransaction, 'id'>):
   const newTransaction: ITransaction = {
     id: generateUniqueId(),
     ...transactionData,
+    date: new Date(transactionData.date), // Convert date string to Date object
   };
   inMemoryTransactions.push(newTransaction);
   return newTransaction;
