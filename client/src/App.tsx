@@ -35,6 +35,7 @@ function App() {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const audioChunksRef = useRef<Blob[]>([]); // Use useRef for audio chunks
   const [transcribedText, setTranscribedText] = useState<string>('');
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
@@ -99,21 +100,21 @@ function App() {
       console.log('Using MIME type:', mimeType);
       const recorder = new MediaRecorder(stream, { mimeType });
       setMediaRecorder(recorder);
-      setAudioChunks([]); // Ensure chunks are empty at start
-      setTranscribedText('');
+      audioChunksRef.current = []; // Clear chunks using ref
+      setTranscribedText(''); // Clear previous transcription
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           console.log('ondataavailable fired with data size:', event.data.size);
-          setAudioChunks((prev) => [...prev, event.data]);
+          audioChunksRef.current.push(event.data); // Push to ref
         } else {
           console.log('ondataavailable fired with empty data.');
         }
       };
 
       recorder.onstop = async () => {
-        console.log('MediaRecorder stopped. Total chunks:', audioChunks.length);
-        const audioBlob = new Blob(audioChunks, { type: mimeType });
+        console.log('MediaRecorder stopped. Total chunks:', audioChunksRef.current.length);
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType }); // Use ref to create Blob
         console.log('Audio Blob created:', audioBlob.type, audioBlob.size, audioBlob);
 
         if (audioBlob.size === 0) {
