@@ -1,20 +1,12 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { ITransaction, IRule } from './models';
 
-dotenv.config();
+// In-memory storage for transactions and rules
+export const inMemoryTransactions: ITransaction[] = [];
+export const inMemoryRules: IRule[] = [];
 
+// This function is now a no-op as we are using in-memory storage
 const connectDB = async () => {
-  try {
-    const mongoURI = process.env.MONGO_URI;
-    if (!mongoURI) {
-      throw new Error('MONGO_URI is not defined in .env file');
-    }
-    await mongoose.connect(mongoURI);
-    console.log('MongoDB connected successfully');
-  } catch (err: any) {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
-  }
+  console.log('Using in-memory storage. No database connection needed.');
 };
 
 export default connectDB;
