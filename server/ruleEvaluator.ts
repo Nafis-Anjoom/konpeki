@@ -14,11 +14,12 @@ const dslHelpers = {
 const ruleFunctionCache = new Map<string, Function>();
 
 export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
+  console.log('Evaluating rule:', rule.ruleDefinition, 'for transaction:', transaction.id);
   if (!rule || !rule.ruleDefinition) {
+    console.log('Rule or ruleDefinition is missing.');
     return false;
   }
 
-  // Split the ruleDefinition into condition and newCategory
   const parts = rule.ruleDefinition.split('->');
   if (parts.length !== 2) {
     console.error('Invalid ruleDefinition format. Expected "condition -> newCategory"');
@@ -26,22 +27,20 @@ export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
   }
 
   const conditionString = parts[0].trim();
-  // The newCategory is already stored in rule.newCategory, so we only need the condition
+  console.log('Condition string:', conditionString);
 
   let compiledFunction = ruleFunctionCache.get(conditionString);
 
   if (!compiledFunction) {
+    console.log('Compiling new function for condition:', conditionString);
     try {
-      // Create a function dynamically from the condition string
-      // This function will be executed in a controlled scope
-      // WARNING: This is a security risk if ruleDefinition comes from untrusted sources.
-      // For a hackathon, it's a quick way to get a flexible DSL. (Acknowledged)
       compiledFunction = new Function(
         'transaction',
         ...Object.keys(dslHelpers),
         `return ${conditionString};`
       );
       ruleFunctionCache.set(conditionString, compiledFunction);
+      console.log('Function compiled successfully.');
     } catch (e) {
       console.error(`Error compiling rule: "${conditionString}"`, e);
       return false;
@@ -49,12 +48,12 @@ export function evaluateRule(transaction: ITransaction, rule: IRule): boolean {
   }
 
   try {
-    // Execute the compiled function with the transaction and helpers
     const result = compiledFunction(
       transaction,
       ...Object.values(dslHelpers)
     );
-    return !!result; // Ensure boolean return
+    console.log('Evaluation result:', result);
+    return !!result;
   } catch (e) {
     console.error(`Error evaluating rule: "${conditionString}" for transaction ID: ${transaction.id}`, e);
     return false;
