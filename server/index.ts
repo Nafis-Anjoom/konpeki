@@ -36,11 +36,14 @@ const app = {
     // Parse request body for POST requests
     let requestBody: any;
     if (request.method === 'POST') {
-      try {
-        requestBody = await request.json();
-      } catch (error) {
-        console.error('Error parsing request body:', error);
-        return createJsonResponse({ message: 'Invalid JSON body' }, 400);
+      const contentType = request.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          requestBody = await request.json();
+        } catch (error) {
+          console.error('Error parsing request body:', error);
+          return createJsonResponse({ message: 'Invalid JSON body' }, 400);
+        }
       }
     }
 

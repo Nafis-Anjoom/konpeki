@@ -1,210 +1,133 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateRule } from './ruleEvaluator';
+import { evaluateRule, dslHelpers } from './ruleEvaluator'; // Import dslHelpers for context
 import { ITransaction, IRule } from './models';
 
-describe('evaluateRule', () => {
+describe('evaluateRule (DSL)', () => {
   const mockTransaction: ITransaction = {
-    _id: '1',
+    id: '1',
     merchant: 'Walmart',
     amount: 75.50,
     date: new Date('2025-10-04T10:00:00Z'), // Saturday
     account: 'Checking',
     category: 'Groceries',
-    __v: 0,
   };
 
-  it('should return true for a simple matching rule', () => {
+  it('should return true for a simple matching rule (equality)', () => {
     const rule: IRule = {
-      _id: 'rule1',
-      ruleDefinition: {
-        operator: '==',
-        field: 'transaction.merchant',
-        value: 'Walmart',
-      },
+      id: 'rule1',
+      ruleDefinition: `transaction.merchant === "Walmart" -> "Shopping"`,
       newCategory: 'Shopping',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
-  it('should return false for a simple non-matching rule', () => {
+  it('should return false for a simple non-matching rule (equality)', () => {
     const rule: IRule = {
-      _id: 'rule2',
-      ruleDefinition: {
-        operator: '==',
-        field: 'transaction.merchant',
-        value: 'Target',
-      },
+      id: 'rule2',
+      ruleDefinition: `transaction.merchant === "Target" -> "Shopping"`,
       newCategory: 'Shopping',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(false);
   });
 
   it('should handle AND operator correctly', () => {
     const rule: IRule = {
-      _id: 'rule3',
-      ruleDefinition: {
-        operator: 'AND',
-        conditions: [
-          {
-            operator: '==',
-            field: 'transaction.merchant',
-            value: 'Walmart',
-          },
-          {
-            operator: '>',
-            field: 'transaction.amount',
-            value: 50,
-          },
-        ],
-      },
+      id: 'rule3',
+      ruleDefinition: `transaction.merchant === "Walmart" && transaction.amount > 50 -> "Big Shopping"`,
       newCategory: 'Big Shopping',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
   it('should handle OR operator correctly', () => {
     const rule: IRule = {
-      _id: 'rule4',
-      ruleDefinition: {
-        operator: 'OR',
-        conditions: [
-          {
-            operator: '==',
-            field: 'transaction.merchant',
-            value: 'Target',
-          },
-          {
-            operator: '<',
-            field: 'transaction.amount',
-            value: 100,
-          },
-        ],
-      },
+      id: 'rule4',
+      ruleDefinition: `transaction.merchant === "Target" || transaction.amount < 100 -> "Flexible"`,
       newCategory: 'Flexible',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
-  it('should handle dayOfWeek function', () => {
+  it('should handle dayOfWeek function correctly', () => {
     const rule: IRule = {
-      _id: 'rule5',
-      ruleDefinition: {
-        operator: '==',
-        field: 'dayOfWeek(transaction.date)',
-        value: 6, // Saturday
-      },
+      id: 'rule5',
+      ruleDefinition: `dayOfWeek(transaction.date) === 6 -> "Weekend"`, // Saturday
       newCategory: 'Weekend',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
-  it('should handle month function', () => {
+  it('should handle month function correctly', () => {
     const rule: IRule = {
-      _id: 'rule6',
-      ruleDefinition: {
-        operator: '==',
-        field: 'month(transaction.date)',
-        value: 10, // October
-      },
+      id: 'rule6',
+      ruleDefinition: `month(transaction.date) === 10 -> "October Spending"`, // October
       newCategory: 'October Spending',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
-  it('should handle contains operator', () => {
+  it('should handle string includes (like contains)', () => {
     const rule: IRule = {
-      _id: 'rule7',
-      ruleDefinition: {
-        operator: 'contains',
-        field: 'transaction.merchant',
-        value: 'Wal',
-      },
+      id: 'rule7',
+      ruleDefinition: `transaction.merchant.includes("Wal") -> "Partial Match"`,
       newCategory: 'Partial Match',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
-  it('should handle matches (regex) operator', () => {
+  it('should handle regex test (like matches)', () => {
     const rule: IRule = {
-      _id: 'rule8',
-      ruleDefinition: {
-        operator: 'matches',
-        field: 'transaction.merchant',
-        value: '.*wal.*t',
-      },
+      id: 'rule8',
+      ruleDefinition: `new RegExp(".*wal.*t", "i").test(transaction.merchant) -> "Regex Match"`,
       newCategory: 'Regex Match',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
   it('should handle complex nested conditions', () => {
     const rule: IRule = {
-      _id: 'rule9',
-      ruleDefinition: {
-        operator: 'AND',
-        conditions: [
-          {
-            operator: 'OR',
-            conditions: [
-              {
-                operator: '==',
-                field: 'transaction.merchant',
-                value: 'Walmart',
-              },
-              {
-                operator: '==',
-                field: 'transaction.merchant',
-                value: 'Target',
-              },
-            ],
-          },
-          {
-            operator: '<=',
-            field: 'transaction.amount',
-            value: 80,
-          },
-          {
-            operator: '==',
-            field: 'dayOfWeek(transaction.date)',
-            value: 6,
-          },
-        ],
-      },
+      id: 'rule9',
+      ruleDefinition: `(transaction.merchant === "Walmart" || transaction.merchant === "Target") && transaction.amount <= 80 && dayOfWeek(transaction.date) === 6 -> "Complex Rule Category"`,
       newCategory: 'Complex Rule Category',
-      __v: 0,
     };
     expect(evaluateRule(mockTransaction, rule)).toBe(true);
   });
 
   it('should return false for complex non-matching conditions', () => {
     const rule: IRule = {
-      _id: 'rule10',
-      ruleDefinition: {
-        operator: 'AND',
-        conditions: [
-          {
-            operator: '==',
-            field: 'transaction.merchant',
-            value: 'Walmart',
-          },
-          {
-            operator: '>',
-            field: 'transaction.amount',
-            value: 100, // This will make it false
-          },
-        ],
-      },
+      id: 'rule10',
+      ruleDefinition: `transaction.merchant === "Walmart" && transaction.amount > 100 -> "Should Not Match"`,
       newCategory: 'Should Not Match',
-      __v: 0,
     };
+    expect(evaluateRule(mockTransaction, rule)).toBe(false);
+  });
+
+  it('should handle invalid ruleDefinition format', () => {
+    const rule: IRule = {
+      id: 'rule11',
+      ruleDefinition: `transaction.merchant === "Walmart" "No Arrow"`, // Missing '->'
+      newCategory: 'Invalid',
+    };
+    expect(evaluateRule(mockTransaction, rule)).toBe(false);
+  });
+
+  it('should handle compilation errors in ruleDefinition', () => {
+    const rule: IRule = {
+      id: 'rule12',
+      ruleDefinition: `transaction.merchant === "Walmart" && invalid.syntax -> "Error Category"`,
+      newCategory: 'Error Category',
+    };
+    // Expect it to return false due to compilation error
+    expect(evaluateRule(mockTransaction, rule)).toBe(false);
+  });
+
+  it('should handle evaluation errors in ruleDefinition', () => {
+    const rule: IRule = {
+      id: 'rule13',
+      ruleDefinition: `transaction.merchant.nonExistentMethod() -> "Error Category"`,
+      newCategory: 'Error Category',
+    };
+    // Expect it to return false due to evaluation error
     expect(evaluateRule(mockTransaction, rule)).toBe(false);
   });
 });
