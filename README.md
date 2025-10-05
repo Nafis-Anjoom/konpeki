@@ -1,4 +1,5 @@
 # Smart Transaction Categorizer
+![Smart Transaction Categorizer Screenshot](assets/Screenshot%20From%202025-10-05%2005-04-16.png)
 
 This is a full-stack project for automatically re-categorizing financial transactions based on user-defined rules.
 
